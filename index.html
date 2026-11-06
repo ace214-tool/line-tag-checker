@@ -63,13 +63,14 @@
   <tr><td>MEO</td><td>MEO案件管理・ステータス</td><td>同じ顧客番号（枝番は親番号に束ねる）に1件でも「施策中」「施策中(HP課金中)」「対応待ち(課金中)」「対応待ち」がある</td><td>上記が1件もない</td></tr>
   <tr><td>MEO休止中</td><td>同上</td><td>MEOがつかず、「休止中」がある</td><td>それ以外</td></tr>
   <tr><td>MEO休止中(滞納)</td><td>同上</td><td>MEOがつかず、「休止中(滞納)」がある</td><td>それ以外</td></tr>
+  <tr><td>MEO解約</td><td>同上</td><td>MEO・MEO休止中・MEO休止中(滞納)のどれもつかず、「解約」「解約(営業用継続)」がある</td><td>それ以外</td></tr>
   <tr><td>チェキ／モノ</td><td>施策中の行の「提供ツール」</td><td>MEOがつく案件で、施策中の行にある種類</td><td>MEOがつかないとき、または施策中の行にない種類</td></tr>
   <tr><td>HP</td><td>クリエイティブ案件管理・ステータス</td><td>「契約中」「契約中(MEO休止中)」がある</td><td>上記が1件もなく、かつ MEO の契約もない（MEO契約中の案件はHPがクリエイティブ案件管理に載っていないことが多いので、ついているHPは残す）</td></tr>
   <tr><td>HP(納品予定)</td><td>—</td><td>つけない（手動のまま）</td><td>HPをつけるとき一緒に外す</td></tr>
   <tr><td>その他（公式LINE系・遠藤商談・桂川商談 など）</td><td>—</td><td colspan="2">触らない</td></tr>
 </table>
 <p class="note">・顧客番号はチャット名から拾う（UL3687、AD2189、SS0010、user062141 など）。チャット名に番号がない、または kintone のどちらにも該当がないチャットは「未照合」として別枠に出すだけで、タグは触らない。<br>
-・「MEO休止中」「MEO休止中(滞納)」のタグが LINE 側にまだない場合は、パネルにその旨が出る。LINE の画面でタグを作ってから再実行。</p>
+・「MEO休止中」「MEO休止中(滞納)」「MEO解約」のタグが LINE 側にまだない場合は、パネルにその旨が出る。LINE の画面でタグを作ってから再実行。</p>
 
 <h2>注意</h2>
 <ul class="note">
@@ -78,7 +79,7 @@
   <li>「解約済みだが LINE の友だちは残っている」チャットが多いので、初回はズレの件数が多めに出ます。</li>
 </ul>
 
-<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）　／　v2.1 チャット名・顧客番号のクリックコピー　／　v2.2 同番号チャット複数・枝番ありの案件に目印と行色</p>
+<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）　／　v2.1 チャット名・顧客番号のクリックコピー　／　v2.2 同番号チャット複数・枝番ありの案件に目印と行色　／　v2.3 解約案件に「MEO解約」タグ</p>
 
 <script type="text/plain" id="bm-src">
 void((async () => {
@@ -93,11 +94,12 @@ void((async () => {
   const MEO_ACTIVE = ['施策中', '施策中(HP課金中)', '対応待ち(課金中)', '対応待ち'];
   const MEO_PAUSE = ['休止中'];
   const MEO_PAUSE_TAINO = ['休止中(滞納)'];
+  const MEO_KAIYAKU = ['解約', '解約(営業用継続)'];
   const HP_ACTIVE = ['契約中', '契約中(MEO休止中)'];
   const TOOL_TAGS = ['チェキ', 'モノ'];           /* 提供ツール列の値のうちタグにするもの（GMOは対象外） */
-  const T = { MEO: 'MEO', PAUSE: 'MEO休止中', TAINO: 'MEO休止中(滞納)', HP: 'HP', HP_YOTEI: 'HP(納品予定)' };
+  const T = { MEO: 'MEO', PAUSE: 'MEO休止中', TAINO: 'MEO休止中(滞納)', KAIYAKU: 'MEO解約', HP: 'HP', HP_YOTEI: 'HP(納品予定)' };
   /* このツールが付け外しするタグ。ここに無いタグは一切触らない */
-  const MANAGED = [T.MEO, T.PAUSE, T.TAINO, T.HP, T.HP_YOTEI].concat(TOOL_TAGS);
+  const MANAGED = [T.MEO, T.PAUSE, T.TAINO, T.KAIYAKU, T.HP, T.HP_YOTEI].concat(TOOL_TAGS);
   /* ===================================== */
 
   const ID = 'linetag-panel';
@@ -235,6 +237,8 @@ void((async () => {
     } else {
       if (mr.some(r => MEO_PAUSE_TAINO.includes(r['ステータス']))) want.add(T.TAINO);
       if (mr.some(r => MEO_PAUSE.includes(r['ステータス']))) want.add(T.PAUSE);
+      /* 施策中も休止中もなく、解約だけ → MEO解約 */
+      if (!want.size && mr.some(r => MEO_KAIYAKU.includes(r['ステータス']))) want.add(T.KAIYAKU);
     }
     if (hr.some(r => HP_ACTIVE.includes(r['ステータス']))) want.add(T.HP);
     return { want, mr, hr, meoActive: act.length > 0 };
