@@ -52,6 +52,7 @@
   <li>LINE Official Account Manager のチャット画面（<code>https://chat.line.biz/…</code>）を開く</li>
   <li>ブックマークバーの「LINEタグ整理」をクリック → 出てきたパネルに CSV を2本まとめてドロップ（または「ファイルを選ぶ」）</li>
   <li>全チャットのタグを取得して照合し、ズレのあるチャットだけ一覧に出る</li>
+  <li>チャット名・顧客番号はクリックでコピーできる</li>
   <li>行ごとの「適用」でそのチャットのタグを直す。確認してから「表示中をすべて適用」でまとめて直すこともできる</li>
   <li>左のチャット一覧の表示はページを再読み込みすると反映される</li>
 </ol>
@@ -77,7 +78,7 @@
   <li>「解約済みだが LINE の友だちは残っている」チャットが多いので、初回はズレの件数が多めに出ます。</li>
 </ul>
 
-<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）</p>
+<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）　／　v2.1 チャット名・顧客番号のクリックコピー</p>
 
 <script type="text/plain" id="bm-src">
 void((async () => {
@@ -320,7 +321,7 @@ void((async () => {
   const chip = (n, kind) => '<span style="display:inline-block;border-radius:4px;padding:0 6px;margin:1px 2px;font-size:12px;' + (kind === 'add' ? 'background:#e6f7ec;color:#06c755;border:1px solid #06c755' : kind === 'del' ? 'background:#fde8e8;color:#c00;border:1px solid #c00;text-decoration:line-through' : kind === 'no' ? 'background:#fff3cd;color:#8a6d00;border:1px solid #e0c060' : 'background:#eee;color:#555') + '">' + esc(n) + '</span>';
   const btnStyle = 'border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600';
   const rowHTML = (d, i) =>
-    '<td style="padding:6px;vertical-align:top"><b style="font-size:13px">' + esc(nameOf(d.c)) + '</b><div style="color:#888;font-size:11px">' + esc(d.st) + '</div></td>' +
+    '<td style="padding:6px;vertical-align:top"><span class="lt-copy" data-v="' + esc(nameOf(d.c)) + '" title="クリックでチャット名をコピー" style="color:#1a73e8;font-weight:700;font-size:13px;cursor:pointer">' + esc(nameOf(d.c)) + '</span> <span class="lt-copy" data-v="' + esc(d.key) + '" title="クリックで顧客番号をコピー" style="display:inline-block;background:#f0f4ff;color:#1a73e8;border:1px solid #c5d3f5;border-radius:4px;padding:0 6px;font-size:11px;cursor:pointer">' + esc(d.key) + '</span><div style="color:#888;font-size:11px">' + esc(d.st) + '</div></td>' +
     '<td style="padding:6px;vertical-align:top">' + d.curNames.map(n => chip(n, MANAGED.includes(n) ? '' : 'other')).join('') + '</td>' +
     '<td style="padding:6px;vertical-align:top">' + d.add.map(n => chip('＋' + n, tagIdOf[n] ? 'add' : 'no')).join('') + d.del.map(n => chip('－' + n, 'del')).join('') + (d.noTag.length ? '<div style="color:#8a6d00;font-size:11px">※ LINE側にタグ未作成：' + esc(d.noTag.join('、')) + '</div>' : '') + '</td>' +
     '<td style="padding:6px;vertical-align:top;white-space:nowrap">' + (d.done ? '<span style="color:#06c755;font-weight:700">適用済み</span>' : '<button class="lt-apply" data-i="' + i + '" style="' + btnStyle + '">適用</button>') + '</td>';
@@ -335,7 +336,7 @@ void((async () => {
           diffs.map((d, i) => '<tr data-i="' + i + '" style="border-top:1px solid #eee">' + rowHTML(d, i) + '</tr>').join('') + '</tbody></table>'
         : '<div style="padding:12px;color:#06c755;font-weight:700">タグのズレはありません</div>') +
       '<details style="margin-top:10px"><summary style="cursor:pointer;color:#555">未照合（タグは触らない）' + unmatched.length + ' 件</summary><table style="width:100%;border-collapse:collapse;font-size:12px">' +
-        unmatched.map(u => '<tr style="border-top:1px solid #eee"><td style="padding:4px 6px">' + esc(nameOf(u.c)) + '</td><td style="padding:4px 6px;color:#888">' + esc(u.reason) + '</td><td style="padding:4px 6px">' + u.curNames.map(n => chip(n, 'other')).join('') + '</td></tr>').join('') + '</table></details>' +
+        unmatched.map(u => '<tr style="border-top:1px solid #eee"><td style="padding:4px 6px"><span class="lt-copy" data-v="' + esc(nameOf(u.c)) + '" title="クリックでコピー" style="color:#1a73e8;cursor:pointer">' + esc(nameOf(u.c)) + '</span></td><td style="padding:4px 6px;color:#888">' + esc(u.reason) + '</td><td style="padding:4px 6px">' + u.curNames.map(n => chip(n, 'other')).join('') + '</td></tr>').join('') + '</table></details>' +
       '<div style="color:#888;font-size:11px;margin-top:8px">灰色＝このツールが触らないタグ。緑＝追加、赤取消線＝削除。適用は画面のタグ編集と同じ処理（そのチャットのタグ全体を上書き）。</div>'
     );
     bind();
@@ -359,6 +360,13 @@ void((async () => {
     d.done = true;
   };
   const bind = () => {
+    /* クリックでコピー（チャット名・顧客番号） */
+    p.querySelectorAll('.lt-copy').forEach(el => {
+      el.onclick = () => {
+        const v = el.dataset.v, orig = el.textContent;
+        navigator.clipboard.writeText(v).then(() => { el.textContent = 'コピーしました'; setTimeout(() => { el.textContent = orig; }, 900); });
+      };
+    });
     p.querySelectorAll('.lt-apply').forEach(btn => {
       btn.onclick = async () => {
         const i = +btn.dataset.i, d = diffs[i];
