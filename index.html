@@ -52,7 +52,7 @@
   <li>LINE Official Account Manager のチャット画面（<code>https://chat.line.biz/…</code>）を開く</li>
   <li>ブックマークバーの「LINEタグ整理」をクリック → 出てきたパネルに CSV を2本まとめてドロップ（または「ファイルを選ぶ」）</li>
   <li>全チャットのタグを取得して照合し、ズレのあるチャットだけ一覧に出る</li>
-  <li>チャット名・顧客番号はクリックでコピーできる</li>
+  <li>チャット名・顧客番号はクリックでコピーできる。行が黄色＝同じ顧客番号のチャットが複数ある（担当者個人とグループなど）、紫＝kintoneに枝番つきの案件がある（親子・複数店舗）ので、適用前に中身を確認</li>
   <li>行ごとの「適用」でそのチャットのタグを直す。確認してから「表示中をすべて適用」でまとめて直すこともできる</li>
   <li>左のチャット一覧の表示はページを再読み込みすると反映される</li>
 </ol>
@@ -78,7 +78,7 @@
   <li>「解約済みだが LINE の友だちは残っている」チャットが多いので、初回はズレの件数が多めに出ます。</li>
 </ul>
 
-<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）　／　v2.1 チャット名・顧客番号のクリックコピー</p>
+<p class="note">更新履歴：2026/11/06 v1 作成　／　v1.1 MEO契約中の案件ではHPタグを外さないよう変更　／　v2 kintone を GAS 経由で直接読込（CSV は予備）　／　v2.1 チャット名・顧客番号のクリックコピー　／　v2.2 同番号チャット複数・枝番ありの案件に目印と行色</p>
 
 <script type="text/plain" id="bm-src">
 void((async () => {
@@ -295,6 +295,9 @@ void((async () => {
 
   /* ---------- 照合 ---------- */
   const nameOf = c => (c.profile && (c.profile.nickname || c.profile.name)) || c.chatId;
+  /* 同じ顧客番号のチャット数（担当者個人＋グループ など複数あるケースの検出用） */
+  const chatCount = {};
+  for (const c of chats) { const k = idFromName(nameOf(c)); if (k) chatCount[k] = (chatCount[k] || 0) + 1; }
   const diffs = [], unmatched = [];
   for (const c of chats) {
     const key = idFromName(nameOf(c));
@@ -313,7 +316,8 @@ void((async () => {
     const noTag = add.filter(n => !tagIdOf[n]);
     const newIds = curIds.filter(id => !del.includes(tagNameOf[id])).concat(addable.map(n => tagIdOf[n]));
     const st = w.mr.map(r => r['顧客番号'] + ':' + r['ステータス'] + (r['提供ツール'] ? '/' + r['提供ツール'] : '')).concat(w.hr.map(r => 'HP ' + r['顧客番号'] + ':' + r['ステータス'])).join('、');
-    diffs.push({ c, key, curNames, add, del, noTag, newIds, st });
+    const branches = [...new Set(w.mr.concat(w.hr).map(r => String(r['顧客番号']).replace(/\s/g, '')).filter(x => /-\d+$/.test(x)))].sort();
+    diffs.push({ c, key, curNames, add, del, noTag, newIds, st, multi: chatCount[key] || 1, branches });
   }
   diffs.sort((a, b) => a.key.localeCompare(b.key));
 
@@ -321,7 +325,10 @@ void((async () => {
   const chip = (n, kind) => '<span style="display:inline-block;border-radius:4px;padding:0 6px;margin:1px 2px;font-size:12px;' + (kind === 'add' ? 'background:#e6f7ec;color:#06c755;border:1px solid #06c755' : kind === 'del' ? 'background:#fde8e8;color:#c00;border:1px solid #c00;text-decoration:line-through' : kind === 'no' ? 'background:#fff3cd;color:#8a6d00;border:1px solid #e0c060' : 'background:#eee;color:#555') + '">' + esc(n) + '</span>';
   const btnStyle = 'border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600';
   const rowHTML = (d, i) =>
-    '<td style="padding:6px;vertical-align:top"><span class="lt-copy" data-v="' + esc(nameOf(d.c)) + '" title="クリックでチャット名をコピー" style="color:#1a73e8;font-weight:700;font-size:13px;cursor:pointer">' + esc(nameOf(d.c)) + '</span> <span class="lt-copy" data-v="' + esc(d.key) + '" title="クリックで顧客番号をコピー" style="display:inline-block;background:#f0f4ff;color:#1a73e8;border:1px solid #c5d3f5;border-radius:4px;padding:0 6px;font-size:11px;cursor:pointer">' + esc(d.key) + '</span><div style="color:#888;font-size:11px">' + esc(d.st) + '</div></td>' +
+    '<td style="padding:6px;vertical-align:top"><span class="lt-copy" data-v="' + esc(nameOf(d.c)) + '" title="クリックでチャット名をコピー" style="color:#1a73e8;font-weight:700;font-size:13px;cursor:pointer">' + esc(nameOf(d.c)) + '</span> <span class="lt-copy" data-v="' + esc(d.key) + '" title="クリックで顧客番号をコピー" style="display:inline-block;background:#f0f4ff;color:#1a73e8;border:1px solid #c5d3f5;border-radius:4px;padding:0 6px;font-size:11px;cursor:pointer">' + esc(d.key) + '</span>' +
+      (d.multi > 1 ? ' <span title="同じ顧客番号のチャットが複数あります（担当者個人・グループなど）" style="display:inline-block;background:#fff3cd;color:#8a6d00;border:1px solid #e0c060;border-radius:4px;padding:0 6px;font-size:11px">同番号チャット ' + d.multi + '件</span>' : '') +
+      (d.branches.length ? ' <span title="kintone に枝番つきの案件があります（親子・複数店舗）" style="display:inline-block;background:#efe6ff;color:#5a3ea6;border:1px solid #c9b6f0;border-radius:4px;padding:0 6px;font-size:11px">枝番あり ' + esc(d.branches.map(b => b.replace(/^.*?(-\d+)$/, '$1')).join(' ')) + '</span>' : '') +
+      '<div style="color:#888;font-size:11px">' + esc(d.st) + '</div></td>' +
     '<td style="padding:6px;vertical-align:top">' + d.curNames.map(n => chip(n, MANAGED.includes(n) ? '' : 'other')).join('') + '</td>' +
     '<td style="padding:6px;vertical-align:top">' + d.add.map(n => chip('＋' + n, tagIdOf[n] ? 'add' : 'no')).join('') + d.del.map(n => chip('－' + n, 'del')).join('') + (d.noTag.length ? '<div style="color:#8a6d00;font-size:11px">※ LINE側にタグ未作成：' + esc(d.noTag.join('、')) + '</div>' : '') + '</td>' +
     '<td style="padding:6px;vertical-align:top;white-space:nowrap">' + (d.done ? '<span style="color:#06c755;font-weight:700">適用済み</span>' : '<button class="lt-apply" data-i="' + i + '" style="' + btnStyle + '">適用</button>') + '</td>';
@@ -333,11 +340,11 @@ void((async () => {
       (diffs.some(d => !d.done) ? '<div style="margin-bottom:6px"><button id="lt-all" style="' + btnStyle + ';background:#c00;border-color:#c00">表示中をすべて適用（' + diffs.filter(d => !d.done).length + '件）</button></div>' : '') +
       (diffs.length
         ? '<table style="width:100%;border-collapse:collapse"><thead><tr style="color:#888;font-size:11px"><th style="text-align:left;padding:2px 6px;font-weight:400">チャット／kintone</th><th style="text-align:left;padding:2px 6px;font-weight:400">今のタグ</th><th style="text-align:left;padding:2px 6px;font-weight:400">変更</th><th style="text-align:left;padding:2px 6px;font-weight:400">操作</th></tr></thead><tbody>' +
-          diffs.map((d, i) => '<tr data-i="' + i + '" style="border-top:1px solid #eee">' + rowHTML(d, i) + '</tr>').join('') + '</tbody></table>'
+          diffs.map((d, i) => '<tr data-i="' + i + '" style="border-top:1px solid #eee;background:' + (d.multi > 1 ? '#fffbea' : (d.branches.length ? '#f8f4ff' : '#fff')) + '">' + rowHTML(d, i) + '</tr>').join('') + '</tbody></table>'
         : '<div style="padding:12px;color:#06c755;font-weight:700">タグのズレはありません</div>') +
       '<details style="margin-top:10px"><summary style="cursor:pointer;color:#555">未照合（タグは触らない）' + unmatched.length + ' 件</summary><table style="width:100%;border-collapse:collapse;font-size:12px">' +
         unmatched.map(u => '<tr style="border-top:1px solid #eee"><td style="padding:4px 6px"><span class="lt-copy" data-v="' + esc(nameOf(u.c)) + '" title="クリックでコピー" style="color:#1a73e8;cursor:pointer">' + esc(nameOf(u.c)) + '</span></td><td style="padding:4px 6px;color:#888">' + esc(u.reason) + '</td><td style="padding:4px 6px">' + u.curNames.map(n => chip(n, 'other')).join('') + '</td></tr>').join('') + '</table></details>' +
-      '<div style="color:#888;font-size:11px;margin-top:8px">灰色＝このツールが触らないタグ。緑＝追加、赤取消線＝削除。適用は画面のタグ編集と同じ処理（そのチャットのタグ全体を上書き）。</div>'
+      '<div style="color:#888;font-size:11px;margin-top:8px">灰色＝このツールが触らないタグ。緑＝追加、赤取消線＝削除。行の背景 黄＝同じ顧客番号のチャットが複数（担当者個人とグループなど）、紫＝kintoneに枝番つき案件あり（親子・複数店舗）。適用は画面のタグ編集と同じ処理（そのチャットのタグ全体を上書き）。</div>'
     );
     bind();
   };
