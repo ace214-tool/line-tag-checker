@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINEタグ整理（ブックマークレット）</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #222; line-height: 1.7; }
+  h1 { font-size: 22px; border-bottom: 3px solid #06c755; padding-bottom: 8px; }
+  h2 { font-size: 17px; margin-top: 32px; }
+  .btn { display: inline-block; background: #06c755; color: #fff; font-weight: 700; font-size: 17px; padding: 14px 28px; border-radius: 8px; text-decoration: none; cursor: grab; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+  .btn:active { cursor: grabbing; }
+  .box { background: #f4f6f8; border-radius: 8px; padding: 14px 18px; }
+  ol li { margin-bottom: 6px; }
+  code { background: #eee; padding: 1px 5px; border-radius: 4px; }
+  .note { color: #666; font-size: 13px; }
+  table.rule { border-collapse: collapse; font-size: 13px; width: 100%; }
+  table.rule th, table.rule td { border: 1px solid #ddd; padding: 5px 8px; text-align: left; vertical-align: top; }
+  table.rule th { background: #f4f6f8; }
+</style>
+</head>
+<body>
+
+<h1>LINEタグ整理</h1>
+<p>LINE公式アカウントのチャット画面（chat.line.biz）で、各チャットのタグ（MEO／チェキ／モノ／HP など）が kintone の案件ステータスと合っているかを照合し、ズレている分を一覧にして、その場で直せるブックマークレットです。</p>
+
+<h2>インストール（1回だけ）</h2>
+<div class="box">
+  <p>下の緑のボタンを、ブラウザの<strong>ブックマークバーへドラッグ＆ドロップ</strong>してください。<br>
+  すでに古いボタンが入っている場合は、古い方を削除してから入れ直してください。</p>
+  <p style="text-align:center;margin:18px 0"><a class="btn" id="bm-link" href="#">LINEタグ整理</a></p>
+  <p class="note">※ ブックマークバーが出ていない場合は <code>Ctrl + Shift + B</code> で表示できます。<br>
+  ※ ボタンをクリックしても動きません。必ずドラッグしてください。</p>
+</div>
+
+<h2>使い方</h2>
+<ol>
+  <li>kintone から CSV を2本出す
+    <ul>
+      <li><strong>MEO案件管理</strong>：<u>全レコード</u>（解約・休止中も含む）。「顧客番号」「ステータス」「提供ツール」の列が必要。施策中だけに絞った出力だと「外すべきタグ」が判定できないので注意</li>
+      <li><strong>クリエイティブ案件管理</strong>（HP）：「顧客番号」「ステータス」の列が必要</li>
+    </ul>
+  </li>
+  <li>LINE Official Account Manager のチャット画面（<code>https://chat.line.biz/…</code>）を開く</li>
+  <li>ブックマークバーの「LINEタグ整理」をクリック → 出てきたパネルに CSV を2本まとめてドロップ（または「ファイルを選ぶ」）</li>
+  <li>全チャットのタグを取得して照合し、ズレのあるチャットだけ一覧に出る</li>
+  <li>行ごとの「適用」でそのチャットのタグを直す。確認してから「表示中をすべて適用」でまとめて直すこともできる</li>
+  <li>左のチャット一覧の表示はページを再読み込みすると反映される</li>
+</ol>
+
+<h2>タグのルール</h2>
+<table class="rule">
+  <tr><th>タグ</th><th>判定元</th><th>つける</th><th>外す</th></tr>
+  <tr><td>MEO</td><td>MEO案件管理・ステータス</td><td>同じ顧客番号（枝番は親番号に束ねる）に1件でも「施策中」「施策中(HP課金中)」「対応待ち(課金中)」「対応待ち」がある</td><td>上記が1件もない</td></tr>
+  <tr><td>MEO休止中</td><td>同上</td><td>MEOがつかず、「休止中」がある</td><td>それ以外</td></tr>
+  <tr><td>MEO休止中(滞納)</td><td>同上</td><td>MEOがつかず、「休止中(滞納)」がある</td><td>それ以外</td></tr>
+  <tr><td>チェキ／モノ</td><td>施策中の行の「提供ツール」</td><td>MEOがつく案件で、施策中の行にある種類</td><td>MEOがつかないとき、または施策中の行にない種類</td></tr>
+  <tr><td>HP</td><td>クリエイティブ案件管理・ステータス</td><td>「契約中」「契約中(MEO休止中)」がある</td><td>上記が1件もない</td></tr>
+  <tr><td>HP(納品予定)</td><td>—</td><td>つけない（手動のまま）</td><td>HPをつけるとき一緒に外す</td></tr>
+  <tr><td>その他（公式LINE系・遠藤商談・桂川商談 など）</td><td>—</td><td colspan="2">触らない</td></tr>
+</table>
+<p class="note">・顧客番号はチャット名から拾う（UL3687、AD2189、SS0010、user062141 など）。チャット名に番号がない、または kintone のどちらにも該当がないチャットは「未照合」として別枠に出すだけで、タグは触らない。<br>
+・「MEO休止中」「MEO休止中(滞納)」のタグが LINE 側にまだない場合は、パネルにその旨が出る。LINE の画面でタグを作ってから再実行。</p>
+
+<h2>注意</h2>
+<ul class="note">
+  <li>LINEの管理画面が内部で使っているAPI（非公式）を使っているため、LINE側の仕様変更で動かなくなることがあります。動かなくなったら三澤まで。</li>
+  <li>CSV はブラウザ内で読むだけで、どこにも送信・保存しません。</li>
+  <li>「解約済みだが LINE の友だちは残っている」チャットが多いので、初回はズレの件数が多めに出ます。</li>
+</ul>
+
+<p class="note">更新履歴：2026/11/06 v1 作成</p>
+
+<script type="text/plain" id="bm-src">
+void((async () => {
+  const m = location.pathname.match(/^\/(U[0-9a-f]{32})/);
+  if (location.hostname !== 'chat.line.biz' || !m) {
+    alert('LINE公式アカウントのチャット画面（chat.line.biz）で実行してください');
+    return;
+  }
+  const botId = m[1];
+
+  /* ===== ルール（変えるときはここ） ===== */
+  const MEO_ACTIVE = ['施策中', '施策中(HP課金中)', '対応待ち(課金中)', '対応待ち'];
+  const MEO_PAUSE = ['休止中'];
+  const MEO_PAUSE_TAINO = ['休止中(滞納)'];
+  const HP_ACTIVE = ['契約中', '契約中(MEO休止中)'];
+  const TOOL_TAGS = ['チェキ', 'モノ'];           /* 提供ツール列の値のうちタグにするもの（GMOは対象外） */
+  const T = { MEO: 'MEO', PAUSE: 'MEO休止中', TAINO: 'MEO休止中(滞納)', HP: 'HP', HP_YOTEI: 'HP(納品予定)' };
+  /* このツールが付け外しするタグ。ここに無いタグは一切触らない */
+  const MANAGED = [T.MEO, T.PAUSE, T.TAINO, T.HP, T.HP_YOTEI].concat(TOOL_TAGS);
+  /* ===================================== */
+
+  const ID = 'linetag-panel';
+  const old = document.getElementById(ID); if (old) old.remove();
+  const p = document.createElement('div');
+  p.id = ID;
+  const POSKEY = 'linetag_pos';
+  let pos = null;
+  try { pos = JSON.parse(localStorage.getItem(POSKEY) || 'null'); } catch (e) {}
+  p.style.cssText = 'position:fixed;width:820px;max-height:70vh;overflow:auto;background:#fff;color:#222;border:2px solid #06c755;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:2147483647;font:13px/1.5 system-ui,sans-serif;padding:10px 12px;text-align:left;';
+  if (pos && pos.left >= 0 && pos.top >= 0 && pos.left < innerWidth - 100 && pos.top < innerHeight - 60) { p.style.left = pos.left + 'px'; p.style.top = pos.top + 'px'; }
+  else { p.style.right = '12px'; p.style.bottom = '12px'; }
+  document.body.appendChild(p);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const header = body => '<div id="lt-head" style="display:flex;justify-content:space-between;align-items:center;margin:-10px -12px 8px;padding:8px 12px;background:#eefaf3;border-radius:8px 8px 0 0;cursor:move;user-select:none"><b style="font-size:14px">LINEタグ整理 <span style="font-weight:400;color:#888;font-size:11px">（ここを持って移動）</span></b><button id="lt-close" style="border:0;background:#fff;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:12px">閉じる</button></div>' + body;
+  const show = body => {
+    p.innerHTML = header(body);
+    p.querySelector('#lt-close').onclick = () => p.remove();
+    const h = p.querySelector('#lt-head');
+    h.onmousedown = e => {
+      if (e.target.id === 'lt-close') return;
+      const r = p.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      const mv = ev => { p.style.right = 'auto'; p.style.bottom = 'auto'; p.style.left = Math.max(0, ev.clientX - dx) + 'px'; p.style.top = Math.max(0, ev.clientY - dy) + 'px'; };
+      const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); try { localStorage.setItem(POSKEY, JSON.stringify({ left: parseInt(p.style.left, 10), top: parseInt(p.style.top, 10) })); } catch (x) {} };
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up); e.preventDefault();
+    };
+  };
+
+  /* ---------- CSV ---------- */
+  const decode = buf => {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^﻿/, ''); }
+    catch (e) { return new TextDecoder('shift_jis').decode(buf); }
+  };
+  const parseCSV = text => {
+    const rows = []; let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    if (!rows.length) return [];
+    const head = rows[0].map(s => s.trim());
+    return rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => { const o = {}; head.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
+  };
+  const readFiles = files => Promise.all([...files].map(f => new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res({ name: f.name, rows: parseCSV(decode(fr.result)) });
+    fr.onerror = () => rej(new Error(f.name + ' を読めませんでした'));
+    fr.readAsArrayBuffer(f);
+  })));
+
+  /* 顧客番号 → 親番号（UL3687-4 → UL3687） */
+  const ID_RE = /(UL|AD|SS)\s?\d{3,5}(?:-\d+)?(?!\d)|user\d{4,}/i;
+  const parentOf = id => String(id || '').replace(/\s/g, '').replace(/-\d+$/, '').toUpperCase();
+  const idFromName = name => { const mm = String(name || '').match(ID_RE); return mm ? parentOf(mm[0]) : ''; };
+
+  /* ---------- 入力画面 ---------- */
+  const files = await new Promise(resolve => {
+    show('<div style="padding:4px 0 8px">kintone の CSV を <b>2本まとめて</b> ここにドロップしてください（MEO案件管理＝全レコード／クリエイティブ案件管理）</div>' +
+      '<div id="lt-drop" style="border:2px dashed #06c755;border-radius:8px;padding:28px;text-align:center;color:#555;background:#f8fdf9">ここにドロップ<br><span style="font-size:11px">または</span><br><input type="file" id="lt-file" multiple accept=".csv,text/csv" style="margin-top:6px"></div>' +
+      '<div style="color:#888;font-size:11px;margin-top:8px">CSV はこのブラウザ内で読むだけで、どこにも送信しません。</div>');
+    const dz = p.querySelector('#lt-drop');
+    dz.ondragover = e => { e.preventDefault(); dz.style.background = '#e6f7ec'; };
+    dz.ondragleave = () => { dz.style.background = '#f8fdf9'; };
+    dz.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files.length) resolve(e.dataTransfer.files); };
+    p.querySelector('#lt-file').onchange = e => { if (e.target.files.length) resolve(e.target.files); };
+  });
+
+  let meoRows = null, hpRows = null, fileNote = [];
+  try {
+    const loaded = await readFiles(files);
+    for (const f of loaded) {
+      const cols = f.rows.length ? Object.keys(f.rows[0]) : [];
+      if (cols.includes('提供ツール') && cols.includes('ステータス') && cols.includes('顧客番号')) { meoRows = f.rows; fileNote.push('MEO案件管理：' + f.name + '（' + f.rows.length + '行）'); }
+      else if (cols.includes('HP数') || (cols.includes('ステータス') && cols.includes('顧客番号') && cols.includes('契約プラン') && !cols.includes('施策'))) { hpRows = f.rows; fileNote.push('クリエイティブ案件管理：' + f.name + '（' + f.rows.length + '行）'); }
+      else fileNote.push('<span style="color:#c00">判別できず：' + esc(f.name) + '（列：' + esc(cols.join(', ')) + '）</span>');
+    }
+  } catch (e) { show('<div style="color:#c00">' + esc(e.message) + '</div>'); return; }
+  if (!meoRows || !hpRows) { show('<div style="color:#c00">CSV が揃っていません。MEO案件管理とクリエイティブ案件管理の2本を入れてください。</div><div style="font-size:12px;margin-top:6px">' + fileNote.join('<br>') + '</div>'); return; }
+  const warn = [];
+  if (!meoRows.some(r => /解約/.test(r['ステータス']))) warn.push('MEO案件管理の CSV に「解約」の行がありません。施策中だけに絞った出力の可能性があります（外すべきMEOタグが判定できません）。');
+
+  /* 親番号ごとに集計 */
+  const meoBy = {}, hpBy = {};
+  for (const r of meoRows) { const k = parentOf(r['顧客番号']); if (!k) continue; (meoBy[k] = meoBy[k] || []).push(r); }
+  for (const r of hpRows) { const k = parentOf(r['顧客番号']); if (!k) continue; (hpBy[k] = hpBy[k] || []).push(r); }
+
+  /* あるべきタグ（MANAGED の範囲内）を返す。kintone に該当なしなら null */
+  const wantTags = key => {
+    const mr = meoBy[key] || [], hr = hpBy[key] || [];
+    if (!mr.length && !hr.length) return null;
+    const want = new Set();
+    const act = mr.filter(r => MEO_ACTIVE.includes(r['ステータス']));
+    if (act.length) {
+      want.add(T.MEO);
+      act.forEach(r => { const t = r['提供ツール']; if (TOOL_TAGS.includes(t)) want.add(t); });
+    } else {
+      if (mr.some(r => MEO_PAUSE_TAINO.includes(r['ステータス']))) want.add(T.TAINO);
+      if (mr.some(r => MEO_PAUSE.includes(r['ステータス']))) want.add(T.PAUSE);
+    }
+    if (hr.some(r => HP_ACTIVE.includes(r['ステータス']))) want.add(T.HP);
+    return { want, mr, hr };
+  };
+
+  /* ---------- LINE 側取得 ---------- */
+  show('タグ一覧を取得中…');
+  const H = { 'Accept': 'application/json, text/plain, */*', 'x-oa-chat-client-version': '20240513144702' };
+  let tagList = [];
+  try {
+    const r = await fetch('/api/v1/bots/' + botId + '/tags', { credentials: 'include', headers: H });
+    if (!r.ok) throw new Error('タグ一覧の取得に失敗（HTTP ' + r.status + '）');
+    const j = await r.json();
+    tagList = Array.isArray(j) ? j : (j.list || j.tags || j.items || []);
+  } catch (e) { show('<div style="color:#c00">' + esc(e.message) + '</div>'); return; }
+  const tagIdOf = {}, tagNameOf = {};
+  for (const t of tagList) { const id = t.tagId || t.id, nm = t.name || t.tagName; if (id && nm) { tagIdOf[nm] = id; tagNameOf[id] = nm; } }
+  if (!Object.keys(tagIdOf).length) { show('<div style="color:#c00">タグ一覧の形式が想定と違います。下の内容を三澤へ送ってください。</div><pre style="white-space:pre-wrap;font-size:11px;background:#f6f6f6;padding:8px">' + esc(JSON.stringify(tagList).slice(0, 1500)) + '</pre>'); return; }
+  const missingTags = MANAGED.filter(n => !tagIdOf[n]);
+
+  const chats = [];
+  let next = null, pages = 0;
+  try {
+    while (pages < 600) {
+      const url = '/api/v2/bots/' + botId + '/chats?folderType=ALL&limit=25' + (next ? '&next=' + encodeURIComponent(next) : '');
+      const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+      if (r.status === 401 || r.status === 403) throw new Error('認証エラー（' + r.status + '）。ページを再読み込みしてから再実行してください');
+      if (!r.ok) throw new Error('APIエラー ' + r.status + '。LINE側の仕様が変わった可能性があります');
+      const j = await r.json();
+      const list = Array.isArray(j.list) ? j.list : [];
+      chats.push(...list);
+      pages++;
+      show('チャット取得中… ' + chats.length + '件');
+      if (!j.next || !list.length) break;
+      next = j.next;
+    }
+  } catch (e) { show('<div style="color:#c00">エラー：' + esc(e.message) + '</div>'); return; }
+  if (!chats.length) { show('チャットが0件でした'); return; }
+
+  /* チャットのタグID配列を取り出す（一覧に含まれていなければ個別取得） */
+  const tagIdsOfChat = c => {
+    const v = c.tagIds || c.tags;
+    if (!Array.isArray(v)) return null;
+    return v.map(t => (typeof t === 'string' ? t : (t.tagId || t.id))).filter(Boolean);
+  };
+  if (tagIdsOfChat(chats[0]) === null && !('tagIds' in chats[0]) && !('tags' in chats[0])) {
+    let ok = 0;
+    for (let i = 0; i < chats.length; i++) {
+      const c = chats[i];
+      try {
+        const r = await fetch('/api/v1/bots/' + botId + '/chats/' + c.chatId + '/tags', { credentials: 'include', headers: H });
+        if (r.ok) { const j = await r.json(); c.tagIds = (Array.isArray(j) ? j : (j.tagIds || j.list || j.tags || [])).map(t => (typeof t === 'string' ? t : (t.tagId || t.id))).filter(Boolean); ok++; }
+      } catch (e) {}
+      if (i % 20 === 0) show('各チャットのタグを取得中… ' + i + '/' + chats.length);
+    }
+    if (!ok) { show('<div style="color:#c00">チャットのタグ情報が取れませんでした。下の内容を三澤へ送ってください。</div><pre style="white-space:pre-wrap;font-size:11px;background:#f6f6f6;padding:8px">' + esc(JSON.stringify(Object.keys(chats[0]))) + '</pre>'); return; }
+  }
+
+  /* ---------- 照合 ---------- */
+  const nameOf = c => (c.profile && (c.profile.nickname || c.profile.name)) || c.chatId;
+  const diffs = [], unmatched = [];
+  for (const c of chats) {
+    const key = idFromName(nameOf(c));
+    const curIds = tagIdsOfChat(c) || [];
+    const curNames = curIds.map(id => tagNameOf[id]).filter(Boolean);
+    if (!key) { unmatched.push({ c, reason: 'チャット名に顧客番号なし', curNames }); continue; }
+    const w = wantTags(key);
+    if (!w) { unmatched.push({ c, reason: key + ' が kintone の両方に見当たらない', curNames }); continue; }
+    const want = w.want;
+    const add = [...want].filter(n => !curNames.includes(n));
+    const del = curNames.filter(n => MANAGED.includes(n) && !want.has(n) && n !== T.HP_YOTEI);
+    if (curNames.includes(T.HP_YOTEI) && want.has(T.HP)) del.push(T.HP_YOTEI);
+    if (!add.length && !del.length) continue;
+    const addable = add.filter(n => tagIdOf[n]);
+    const noTag = add.filter(n => !tagIdOf[n]);
+    const newIds = curIds.filter(id => !del.includes(tagNameOf[id])).concat(addable.map(n => tagIdOf[n]));
+    const st = w.mr.map(r => r['顧客番号'] + ':' + r['ステータス'] + (r['提供ツール'] ? '/' + r['提供ツール'] : '')).concat(w.hr.map(r => 'HP ' + r['顧客番号'] + ':' + r['ステータス'])).join('、');
+    diffs.push({ c, key, curNames, add, del, noTag, newIds, st });
+  }
+  diffs.sort((a, b) => a.key.localeCompare(b.key));
+
+  /* ---------- 表示 ---------- */
+  const chip = (n, kind) => '<span style="display:inline-block;border-radius:4px;padding:0 6px;margin:1px 2px;font-size:12px;' + (kind === 'add' ? 'background:#e6f7ec;color:#06c755;border:1px solid #06c755' : kind === 'del' ? 'background:#fde8e8;color:#c00;border:1px solid #c00;text-decoration:line-through' : kind === 'no' ? 'background:#fff3cd;color:#8a6d00;border:1px solid #e0c060' : 'background:#eee;color:#555') + '">' + esc(n) + '</span>';
+  const btnStyle = 'border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600';
+  const rowHTML = (d, i) =>
+    '<td style="padding:6px;vertical-align:top"><b style="font-size:13px">' + esc(nameOf(d.c)) + '</b><div style="color:#888;font-size:11px">' + esc(d.st) + '</div></td>' +
+    '<td style="padding:6px;vertical-align:top">' + d.curNames.map(n => chip(n, MANAGED.includes(n) ? '' : 'other')).join('') + '</td>' +
+    '<td style="padding:6px;vertical-align:top">' + d.add.map(n => chip('＋' + n, tagIdOf[n] ? 'add' : 'no')).join('') + d.del.map(n => chip('－' + n, 'del')).join('') + (d.noTag.length ? '<div style="color:#8a6d00;font-size:11px">※ LINE側にタグ未作成：' + esc(d.noTag.join('、')) + '</div>' : '') + '</td>' +
+    '<td style="padding:6px;vertical-align:top;white-space:nowrap">' + (d.done ? '<span style="color:#06c755;font-weight:700">適用済み</span>' : '<button class="lt-apply" data-i="' + i + '" style="' + btnStyle + '">適用</button>') + '</td>';
+  const render = () => {
+    show(
+      '<div style="font-size:12px;color:#555;margin-bottom:6px">' + fileNote.join('　') + '<br>チャット ' + chats.length + ' 件 → ズレあり <b style="color:#c00;font-size:16px">' + diffs.filter(d => !d.done).length + ' 件</b>／未照合 ' + unmatched.length + ' 件' +
+      (missingTags.length ? '<div style="color:#8a6d00">※ LINE側に未作成のタグ：' + esc(missingTags.join('、')) + '（LINEの画面で作成してから再実行すると付けられます）</div>' : '') +
+      warn.map(w => '<div style="color:#c00">※ ' + esc(w) + '</div>').join('') + '</div>' +
+      (diffs.some(d => !d.done) ? '<div style="margin-bottom:6px"><button id="lt-all" style="' + btnStyle + ';background:#c00;border-color:#c00">表示中をすべて適用（' + diffs.filter(d => !d.done).length + '件）</button></div>' : '') +
+      (diffs.length
+        ? '<table style="width:100%;border-collapse:collapse"><thead><tr style="color:#888;font-size:11px"><th style="text-align:left;padding:2px 6px;font-weight:400">チャット／kintone</th><th style="text-align:left;padding:2px 6px;font-weight:400">今のタグ</th><th style="text-align:left;padding:2px 6px;font-weight:400">変更</th><th style="text-align:left;padding:2px 6px;font-weight:400">操作</th></tr></thead><tbody>' +
+          diffs.map((d, i) => '<tr data-i="' + i + '" style="border-top:1px solid #eee">' + rowHTML(d, i) + '</tr>').join('') + '</tbody></table>'
+        : '<div style="padding:12px;color:#06c755;font-weight:700">タグのズレはありません</div>') +
+      '<details style="margin-top:10px"><summary style="cursor:pointer;color:#555">未照合（タグは触らない）' + unmatched.length + ' 件</summary><table style="width:100%;border-collapse:collapse;font-size:12px">' +
+        unmatched.map(u => '<tr style="border-top:1px solid #eee"><td style="padding:4px 6px">' + esc(nameOf(u.c)) + '</td><td style="padding:4px 6px;color:#888">' + esc(u.reason) + '</td><td style="padding:4px 6px">' + u.curNames.map(n => chip(n, 'other')).join('') + '</td></tr>').join('') + '</table></details>' +
+      '<div style="color:#888;font-size:11px;margin-top:8px">灰色＝このツールが触らないタグ。緑＝追加、赤取消線＝削除。適用は画面のタグ編集と同じ処理（そのチャットのタグ全体を上書き）。</div>'
+    );
+    bind();
+  };
+
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const findXsrf = () => {
+    const cookies = document.cookie.split(';').map(s => s.trim()).filter(Boolean);
+    for (const ck of cookies) { const i = ck.indexOf('='); const k = ck.slice(0, i), v = ck.slice(i + 1); if (/xsrf|csrf/i.test(k) && v) return decodeURIComponent(v); }
+    for (const ck of cookies) { const v = ck.slice(ck.indexOf('=') + 1); const m2 = decodeURIComponent(v).match(UUID); if (m2 && /token/i.test(ck)) return m2[0]; }
+    const meta = document.querySelector('meta[name*="csrf" i],meta[name*="xsrf" i]'); if (meta && meta.content) return meta.content;
+    return '';
+  };
+  const xsrf = findXsrf();
+  /* 画面のタグ編集と同じAPI：PUT …/chats/{chatId}/tags  body {tagIds:[…]}（全体を上書き） */
+  const applyOne = async d => {
+    const h = Object.assign({ 'Content-Type': 'application/json' }, H);
+    if (xsrf) h['x-xsrf-token'] = xsrf;
+    const r = await fetch('/api/v1/bots/' + botId + '/chats/' + d.c.chatId + '/tags', { method: 'PUT', credentials: 'include', headers: h, body: JSON.stringify({ tagIds: d.newIds }) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d.done = true;
+  };
+  const bind = () => {
+    p.querySelectorAll('.lt-apply').forEach(btn => {
+      btn.onclick = async () => {
+        const i = +btn.dataset.i, d = diffs[i];
+        btn.disabled = true; btn.textContent = '送信中…';
+        try { await applyOne(d); p.querySelector('tr[data-i="' + i + '"]').innerHTML = rowHTML(d, i); bind(); }
+        catch (e) { btn.disabled = false; btn.textContent = '適用'; alert('変更できませんでした（' + e.message + '）。画面上で操作してください。'); }
+      };
+    });
+    const all = p.querySelector('#lt-all');
+    if (all) all.onclick = async () => {
+      const todo = diffs.filter(d => !d.done);
+      if (!confirm(todo.length + ' 件のチャットのタグを一括で変更します。よろしいですか？')) return;
+      all.disabled = true;
+      let ng = 0;
+      for (let i = 0; i < todo.length; i++) {
+        all.textContent = '適用中… ' + (i + 1) + '/' + todo.length;
+        try { await applyOne(todo[i]); } catch (e) { ng++; }
+        await new Promise(r => setTimeout(r, 150));
+      }
+      if (ng) alert(ng + ' 件は変更できませんでした（行に「適用」が残っています）。');
+      render();
+    };
+  };
+  render();
+})());
+</script>
+<script>
+  (function () {
+    var src = document.getElementById('bm-src').textContent.trim();
+    var a = document.getElementById('bm-link');
+    a.href = 'javascript:' + encodeURIComponent(src);
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      alert('クリックではなく、ブックマークバーへドラッグしてください');
+    });
+  })();
+</script>
+</body>
+</html>
